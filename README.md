@@ -17,4 +17,4 @@ vendor/              release di mediapipe-touchdesigner (ignorata da git)
 2. [x] Pinch con isteresi (punto 4 ↔ 8)
 3. [x] Corda viva tra i due pinch, con glow
 4. [x] Corde fissate al rilascio (tabella + ridisegno)
-5. [ ] Pizzico: vibrazione smorzata, scintille, suono
+5. [ ] Pizzico: vibrazione smorzata ✓, scintille, suono

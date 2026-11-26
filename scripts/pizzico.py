@@ -1,0 +1,82 @@
+# Execute DAT "pizzico" — parametro Frame Start: On.
+#
+# A ogni frame guarda dove si è mossa la punta di ciascun indice
+# (h1/h2:index_finger_tip, da sel_dita). Se il tratto percorso dal dito
+# tra il frame precedente e questo attraversa una corda fissata, la corda
+# è pizzicata: scrive in corde_tab il momento (t0), il punto lungo la
+# corda (pos), un colore (col) e il verso (dir). Lo shader fa il resto.
+
+ASPETTO = 1280 / 720   # x e y sono 0..1 su un'immagine 16:9
+MARGINE = 0.04         # vicino agli estremi non conta (lì c'è il pinch)
+PAUSA = 0.15           # secondi minimi tra due pizzichi della stessa corda
+SALTO_MAX = 0.35       # spostamenti più grandi sono salti del tracking
+NUM_COLORI = 3
+
+DITI = ('h1:index_finger_tip', 'h2:index_finger_tip')
+
+_prima = {}     # dito -> (x, y) al frame precedente
+_colore = [0]   # colore del prossimo pizzico, gira tra i NUM_COLORI
+
+
+def _cross(ax, ay, bx, by):
+	return ax * by - ay * bx
+
+
+def _dito(src, nome):
+	cx, cy = src[nome + ':x'], src[nome + ':y']
+	if cx is None or cy is None:
+		return None
+	x, y = cx.eval(), cy.eval()
+	if x == 0 and y == 0:   # mano non rilevata
+		return None
+	return (x * ASPETTO, y)
+
+
+def _attraversa(p0, p1, a, b):
+	"""Il tratto p0->p1 incrocia il segmento a->b?
+	Ritorna (posizione lungo a->b, verso) oppure None."""
+	rx, ry = b[0] - a[0], b[1] - a[1]
+	sx, sy = p1[0] - p0[0], p1[1] - p0[1]
+	den = _cross(rx, ry, sx, sy)
+	if abs(den) < 1e-9:
+		return None
+	qx, qy = p0[0] - a[0], p0[1] - a[1]
+	t = _cross(qx, qy, sx, sy) / den   # lungo la corda
+	u = _cross(qx, qy, rx, ry) / den   # lungo il movimento del dito
+	if MARGINE < t < 1 - MARGINE and 0.0 <= u <= 1.0:
+		return t, (1 if den > 0 else -1)
+	return None
+
+
+def onFrameStart(frame):
+	tab = op('salva_corde').module.tabella()
+	src = op('sel_dita')
+	ora = absTime.seconds
+
+	for nome in DITI:
+		p1 = _dito(src, nome)
+		p0 = _prima.get(nome)
+		if p1 is None:
+			_prima.pop(nome, None)
+			continue
+		_prima[nome] = p1
+		if p0 is None:
+			continue
+		if ((p1[0] - p0[0]) ** 2 + (p1[1] - p0[1]) ** 2) ** 0.5 > SALTO_MAX:
+			continue
+
+		for r in range(1, tab.numRows):
+			if ora - float(tab[r, 't0'].val) < PAUSA:
+				continue
+			a = (float(tab[r, 'ax'].val) * ASPETTO, float(tab[r, 'ay'].val))
+			b = (float(tab[r, 'bx'].val) * ASPETTO, float(tab[r, 'by'].val))
+			colpo = _attraversa(p0, p1, a, b)
+			if colpo is None:
+				continue
+			pos, verso = colpo
+			tab[r, 't0'] = '{:.3f}'.format(ora)
+			tab[r, 'pos'] = '{:.3f}'.format(pos)
+			tab[r, 'col'] = _colore[0]
+			tab[r, 'dir'] = verso
+			_colore[0] = (_colore[0] + 1) % NUM_COLORI
+	return
