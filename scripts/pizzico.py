@@ -66,7 +66,9 @@ def onFrameStart(frame):
 			continue
 
 		for r in range(1, tab.numRows):
-			if ora - float(tab[r, 't0'].val) < PAUSA:
+			# absTime riparte da zero a ogni apertura del progetto: un t0 "nel
+			# futuro" viene da una sessione precedente e non blocca il pizzico.
+			if 0.0 <= ora - float(tab[r, 't0'].val) < PAUSA:
 				continue
 			a = (float(tab[r, 'ax'].val) * ASPETTO, float(tab[r, 'ay'].val))
 			b = (float(tab[r, 'bx'].val) * ASPETTO, float(tab[r, 'by'].val))
