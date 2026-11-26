@@ -14,6 +14,32 @@ NUM_COLORI = 3
 
 DITI = ('h1:index_finger_tip', 'h2:index_finger_tip')
 
+# Suono: lunghezza della corda -> nota. Corta = acuta, lunga = grave.
+# Pentatonica minore di La su tre ottave, da La2 (110 Hz).
+PENTATONICA = (0, 3, 5, 7, 10)
+OTTAVE = 3
+NOTA_BASE = 110.0
+LUNGH_CORTA = 0.10     # in unità d'altezza dell'immagine (x già corretta)
+LUNGH_LUNGA = 1.40
+
+
+def _nota(lunghezza):
+	n_note = len(PENTATONICA) * OTTAVE
+	t = (lunghezza - LUNGH_CORTA) / (LUNGH_LUNGA - LUNGH_CORTA)
+	t = min(max(t, 0.0), 1.0)
+	i = int(round((1.0 - t) * (n_note - 1)))
+	ottava, grado = divmod(i, len(PENTATONICA))
+	return NOTA_BASE * 2 ** (ottava + PENTATONICA[grado] / 12.0)
+
+
+def _suona(freq, pos):
+	"""Mette la nota nello storage di questo DAT; la legge lo Script CHOP
+	"suono". Ogni nota ha un id crescente, teniamo solo le ultime 32."""
+	note = list(me.fetch('note', [], search=False))[-31:]
+	nuovo_id = note[-1][0] + 1 if note else 1
+	note.append((nuovo_id, freq, pos))
+	me.store('note', note)
+
 _prima = {}     # dito -> (x, y) al frame precedente
 _colore = [0]   # colore del prossimo pizzico, gira tra i NUM_COLORI
 
@@ -81,4 +107,6 @@ def onFrameStart(frame):
 			tab[r, 'col'] = _colore[0]
 			tab[r, 'dir'] = verso
 			_colore[0] = (_colore[0] + 1) % NUM_COLORI
+			lunghezza = ((b[0] - a[0]) ** 2 + (b[1] - a[1]) ** 2) ** 0.5
+			_suona(_nota(lunghezza), pos)
 	return
