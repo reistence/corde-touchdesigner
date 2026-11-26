@@ -74,10 +74,51 @@ def _attraversa(p0, p1, a, b):
 	return None
 
 
+# Gesto "cancella tutto": due pugni chiusi tenuti per TEMPO_PUGNI secondi.
+SOGLIA_PUGNO = 0.6     # punteggio minimo di Closed_Fist (0..1)
+TEMPO_PUGNI = 0.6
+_pugni = {'da': None, 'armato': True}
+
+
+def pugni_recenti(secondi=1.0):
+	"""True se i due pugni erano chiusi negli ultimi `secondi`. Usata da
+	salva_corde: chiudendo i pugni il pinch scatta, e la corda "finta" si
+	rilascia quando riapri le mani, cioè subito dopo i pugni."""
+	ultimo = op('pizzico').fetch('pugni_ultimo', -1000.0, search=False)
+	return 0.0 <= absTime.seconds - ultimo < secondi
+
+
+def pugni_chiusi():
+	"""True se entrambe le mani fanno il pugno."""
+	g = op('hand_tracking/gestures')
+	if g is None:
+		return False
+	valori = []
+	for mano in ('h1', 'h2'):
+		c = g[mano + ':Closed_Fist']
+		valori.append(c.eval() if c is not None else 0.0)
+	return all(v > SOGLIA_PUGNO for v in valori)
+
+
+def _controlla_pugni(ora):
+	if not pugni_chiusi():
+		_pugni['da'] = None
+		_pugni['armato'] = True   # riarmato quando apri le mani
+		return
+	op('pizzico').store('pugni_ultimo', ora)
+	if _pugni['da'] is None:
+		_pugni['da'] = ora
+	if _pugni['armato'] and ora - _pugni['da'] >= TEMPO_PUGNI:
+		op('salva_corde').module.svuota()
+		_pugni['armato'] = False   # una sola cancellazione per gesto
+
+
 def onFrameStart(frame):
+	ora = absTime.seconds
+	_controlla_pugni(ora)
+
 	tab = op('salva_corde').module.tabella()
 	src = op('sel_dita')
-	ora = absTime.seconds
 
 	for nome in DITI:
 		p1 = _dito(src, nome)

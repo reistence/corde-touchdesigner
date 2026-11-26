@@ -133,6 +133,43 @@ float scintille(vec2 p, vec2 origine, vec2 nrm, float verso, float eta, float se
 	return luce;
 }
 
+// Scintille continue della corda viva. Ogni particella rinasce ogni
+// VITA_VIVA secondi (sfasate tra loro) in un punto casuale della corda e
+// cade lentamente: un pulviscolo che "frigge" mentre tieni la corda.
+const int N_VIVA = 12;
+const float VITA_VIVA = 0.5;
+
+float scintilleViva(vec2 p, vec2 a, vec2 b, float ora) {
+	vec2 ab = b - a;
+	float len = length(ab);
+	if (len < 1.0) return 0.0;
+	// scarto veloce: pixel troppo lontani dalla corda
+	if (distSegmento(p, a, b) > 120.0) return 0.0;
+
+	vec2 dirC = ab / len;
+	vec2 nrm = vec2(-dirC.y, dirC.x);
+	float luce = 0.0;
+	for (int k = 0; k < N_VIVA; k++) {
+		float fk = float(k);
+		float fase = ora / VITA_VIVA + fk / float(N_VIVA);
+		float nascita = floor(fase);        // identifica questa "vita"
+		float eta = fract(fase) * VITA_VIVA;
+
+		float h1 = hash(vec2(nascita, fk));
+		float h2 = hash(vec2(fk + 0.37, nascita));
+		float h3 = hash(vec2(nascita + 5.1, fk + 2.9));
+
+		vec2 origine = mix(a, b, 0.05 + 0.9 * h1);
+		vec2 v0 = nrm * (h2 * 2.0 - 1.0) * 90.0 + dirC * (h3 * 2.0 - 1.0) * 40.0;
+		vec2 testa = origine + v0 * eta + 0.5 * GRAVITA * 0.35 * eta * eta;
+
+		float d = length(p - testa);
+		float vivo = 1.0 - eta / VITA_VIVA;
+		luce += (smoothstep(1.3, 0.0, d) + exp(-d * 0.8) * 0.25) * vivo;
+	}
+	return luce;
+}
+
 // Corda fissata: linea + tacche perpendicolari + "T" agli estremi.
 // "onda" sposta linea e tacche perpendicolarmente (le teste restano ferme).
 // Ritorna (distanza dalla linea, distanza da tacche e teste).
@@ -199,6 +236,7 @@ void main() {
 		           + exp(-d * 0.06) * 0.35;             // alone largo
 
 		col += COL_LIVE * glow + vec3(anima);
+		col += mix(vec3(1.0), COL_LIVE, 0.35) * scintilleViva(p, a, b, uState.y);
 	}
 
 	fragColor = TDOutputSwizzle(vec4(col, 1.0));

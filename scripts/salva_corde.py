@@ -11,7 +11,8 @@
 #   col           indice colore del pizzico (0 lime, 1 rosa, 2 ciano)
 #   dir           verso del pizzico, +1 o -1
 #
-# Per svuotare la tabella dalla Textport:
+# Per svuotare la tabella: due pugni chiusi per mezzo secondo (pizzico.py),
+# oppure dalla Textport:
 #   mod.salva_corde.svuota()
 
 LUNGHEZZA_MIN = 0.05   # corde più corte vengono scartate (pinch accidentali)
@@ -53,6 +54,11 @@ def onOnToOff(channel, sampleIndex, val, prev):
 	ax, ay, bx, by = (p[n].eval() for n in GEOMETRIA)
 
 	if ((bx - ax) ** 2 + (by - ay) ** 2) ** 0.5 < LUNGHEZZA_MIN:
+		return
+
+	# Chiudendo i pugni pollice e indice si avvicinano e il pinch scatta:
+	# quella non è una corda, è il gesto per cancellare tutto.
+	if op('pizzico').module.pugni_recenti(1.0):
 		return
 
 	tab = tabella()

@@ -6,3 +6,4 @@ CrashAutoSave*
 # dipendenze scaricate (release di mediapipe-touchdesigner)
 vendor/
 __pycache__/
+registrazioni/
