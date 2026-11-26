@@ -1,24 +1,24 @@
-# Script CHOP "pinch" — rilevamento del pinch con isteresi.
+# Script CHOP "pinch": pinch detection with hysteresis.
 #
-# Ingresso 0: sel_pinch, con i canali
+# Input 0: sel_pinch, with the channels
 #   h1:pinch_midpoint:distance|x|y  h2:pinch_midpoint:distance|x|y
 #   h1:Leftness h1:Rightness        h2:Leftness h2:Rightness
 #
-# Uscita:
-#   h1:pinch, h2:pinch  -> 1 mentre quella mano è in pinch, altrimenti 0
-#   both                -> 1 quando entrambe sono in pinch
-#   ax ay bx by         -> gli estremi della corda nell'ultimo frame in cui
-#                          entrambe le mani erano presenti e in pinch.
-#                          Al rilascio (both 1 -> 0) restano fermi: è da qui
-#                          che salva_corde legge la corda da fissare.
+# Output:
+#   h1:pinch, h2:pinch  -> 1 while that hand is pinching, 0 otherwise
+#   both                -> 1 when both hands are pinching
+#   ax ay bx by         -> the string endpoints in the last frame where both
+#                          hands were present and pinching.
+#                          On release (both 1 -> 0) they stay put: this is
+#                          where salva_corde reads the string to fix.
 #
-# Una mano non rilevata arriva tutta a zero: la riconosciamo da
-# Leftness + Rightness == 0. Se sparisce per pochi frame teniamo lo stato,
-# così un buco del tracking non chiude la corda per sbaglio.
+# A hand that isn't detected comes in as all zeros: we spot it by
+# Leftness + Rightness == 0. If it disappears for a few frames we keep its
+# state, so a tracking glitch doesn't end the string by accident.
 
-SOGLIA_ON = 0.05    # sotto questa distanza il pinch si chiude
-SOGLIA_OFF = 0.09   # sopra questa si riapre
-TOLLERANZA = 6      # frame di assenza tollerati prima di rilasciare
+SOGLIA_ON = 0.05    # pinch closes below this distance
+SOGLIA_OFF = 0.09   # and opens again above this one
+TOLLERANZA = 6      # frames of absence tolerated before releasing
 
 _stato = {
 	'h1': {'pinch': 0, 'assente': 0, 'presente': False},

@@ -1,19 +1,19 @@
 #!/bin/zsh
-# Converte i .mov ProRes registrati da TouchDesigner in MP4 H.264 leggeri.
+# Converts ProRes .mov files recorded by TouchDesigner into lightweight H.264 MP4s.
 #
-#   ./comprimi.sh                    tutti i .mov in registrazioni/
-#   ./comprimi.sh ~/Desktop/x.mov    file specifici
-#   ./comprimi.sh --elimina          come sopra, e cancella il .mov se la
-#                                    conversione riesce
+#   ./comprimi.sh                    every .mov in registrazioni/
+#   ./comprimi.sh path/to/x.mov      specific files
+#   ./comprimi.sh --elimina          same as above, and deletes each .mov
+#                                    once its conversion succeeds
 #
-# Crea <nome>.mp4 accanto all'originale. Salta i file già convertiti.
-# Lanciato anche da TD (scripts/registra_fine.py) quando la registrazione
-# finisce: in quel caso l'output va in registrazioni/comprimi.log.
+# Writes <name>.mp4 next to the original. Skips files already converted.
+# Also run by TD (scripts/registra_fine.py) when a recording stops:
+# in that case the output goes to registrazioni/comprimi.log.
 
 set -euo pipefail
 cd "$(dirname "$0")"
 
-# TD non eredita il PATH della shell: ffmpeg di Homebrew va aggiunto a mano.
+# TD doesn't inherit the shell's PATH: add Homebrew's ffmpeg by hand.
 export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
 
 elimina=0
@@ -26,14 +26,14 @@ if (( $# == 0 )); then
 	set -- registrazioni/*.mov(N)
 fi
 if (( $# == 0 )); then
-	echo "Nessun .mov in registrazioni/"
+	echo "No .mov files in registrazioni/"
 	exit 0
 fi
 
 for f in "$@"; do
 	out="${f:r}.mp4"
 	if [[ -e "$out" ]]; then
-		echo "salto $f (esiste già $out)"
+		echo "skipping $f ($out already exists)"
 		continue
 	fi
 	echo "→ $f"
@@ -46,10 +46,10 @@ for f in "$@"; do
 		echo "  $(du -h "$f" | cut -f1) → $(du -h "$out" | cut -f1)  $out"
 		if (( elimina )); then
 			rm "$f"
-			echo "  eliminato $f"
+			echo "  deleted $f"
 		fi
 	else
 		rm -f "$tmp"
-		echo "  ERRORE: $f non convertito, lo lascio com'è"
+		echo "  ERROR: $f not converted, leaving it as is"
 	fi
 done

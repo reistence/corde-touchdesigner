@@ -1,22 +1,22 @@
 # CHOP Execute DAT "salva_corde".
 #
-# Parametri: CHOPs = pinch, Channels = both, On to Off = On (il resto Off).
-# Quando both passa da 1 a 0 (rilascio) aggiunge una riga a corde_tab
-# con gli estremi tenuti da pinch (ax ay bx by).
+# Parameters: CHOPs = pinch, Channels = both, On to Off = On (the rest Off).
+# When both goes from 1 to 0 (release) it appends a row to corde_tab
+# with the endpoints held by pinch (ax ay bx by).
 #
-# Colonne di corde_tab:
-#   ax ay bx by   estremi, 0..1, y verso l'alto
-#   t0            absTime.seconds dell'ultimo pizzico (-1000 = mai)
-#   pos           dove è stata pizzicata, 0..1 lungo la corda
-#   col           indice colore del pizzico (0 lime, 1 rosa, 2 ciano)
-#   dir           verso del pizzico, +1 o -1
+# corde_tab columns:
+#   ax ay bx by   endpoints, 0..1, y up
+#   t0            absTime.seconds of the last pluck (-1000 = never)
+#   pos           where it was plucked, 0..1 along the string
+#   col           pluck colour index (0 lime, 1 pink, 2 cyan)
+#   dir           pluck direction, +1 or -1
 #
-# Per svuotare la tabella: due pugni chiusi per mezzo secondo (pizzico.py),
-# oppure dalla Textport:
+# To clear the table: hold two closed fists for about half a second
+# (pizzico.py), or from the Textport:
 #   mod.salva_corde.svuota()
 
-LUNGHEZZA_MIN = 0.05   # corde più corte vengono scartate (pinch accidentali)
-MAX_CORDE = 64         # deve coincidere con MAX_CORDE in corde.frag
+LUNGHEZZA_MIN = 0.05   # shorter strings are discarded (accidental pinches)
+MAX_CORDE = 64         # must match MAX_CORDE in corde.frag
 
 GEOMETRIA = ['ax', 'ay', 'bx', 'by']
 PIZZICO = ['t0', 'pos', 'col', 'dir']
@@ -25,7 +25,7 @@ INTESTAZIONE = GEOMETRIA + PIZZICO
 
 
 def tabella():
-	"""corde_tab con l'intestazione giusta. Migra la versione a 4 colonne."""
+	"""corde_tab with the right header. Migrates the old 4-column version."""
 	tab = op('corde_tab')
 	intestazione = [c.val for c in tab.row(0)] if tab.numRows else []
 
@@ -33,7 +33,7 @@ def tabella():
 		return tab
 
 	if intestazione == GEOMETRIA:
-		# tabella della tappa 4: aggiungo le colonne del pizzico
+		# old geometry-only table: add the pluck columns
 		for nome, default in zip(PIZZICO, PIZZICO_DEFAULT):
 			tab.appendCol([nome] + [default] * (tab.numRows - 1))
 		return tab
@@ -56,14 +56,14 @@ def onOnToOff(channel, sampleIndex, val, prev):
 	if ((bx - ax) ** 2 + (by - ay) ** 2) ** 0.5 < LUNGHEZZA_MIN:
 		return
 
-	# Chiudendo i pugni pollice e indice si avvicinano e il pinch scatta:
-	# quella non è una corda, è il gesto per cancellare tutto.
+	# Closing your fists brings thumb and index together and triggers a pinch:
+	# that's not a string, it's the clear-all gesture.
 	if op('pizzico').module.pugni_recenti(1.0):
 		return
 
 	tab = tabella()
 	if tab.numRows - 1 >= MAX_CORDE:
-		tab.deleteRow(1)   # la più vecchia
+		tab.deleteRow(1)   # the oldest one
 	tab.appendRow(['{:.5f}'.format(v) for v in (ax, ay, bx, by)] + PIZZICO_DEFAULT)
 	return
 

@@ -1,14 +1,14 @@
 # Parameter Execute DAT "registra_fine".
 #
-# Parametri: OPs = registra, Parameters = record, Value Change = On.
-# Quando Record torna su Off, lancia comprimi.sh --elimina in background:
-# il .mov ProRes diventa un .mp4 H.264 leggero e l'originale viene cancellato.
-# L'output dello script finisce in registrazioni/comprimi.log.
+# Parameters: OPs = registra, Parameters = record, Value Change = On.
+# When Record goes back to Off, runs comprimi.sh --elimina in the background:
+# the ProRes .mov becomes a lightweight H.264 .mp4 and the original is deleted.
+# The script's output goes to registrazioni/comprimi.log.
 
 import os
 import subprocess
 
-ATTESA = 2   # secondi: lascia a TD il tempo di chiudere il file .mov
+ATTESA = 2   # seconds: gives TD time to close the .mov file
 
 
 def onValueChange(par, prev):

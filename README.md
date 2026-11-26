@@ -39,7 +39,7 @@ The output is rendered by the `corde` GLSL TOP at 1280×720 and shown full scree
 corde.toe        TouchDesigner project
 scripts/         Python and GLSL code used by the DATs, kept as text files
 comprimi.sh      converts ProRes recordings to H.264 MP4
-docs/            development notes (Italian)
+docs/            hand_tracking.tox channel reference
 vendor/          mediapipe-touchdesigner release (git-ignored)
 registrazioni/   recordings (git-ignored)
 ```
@@ -89,3 +89,7 @@ Operator and variable names are in Italian: *corda* = string, *pizzico* = pluck,
 ## Credits
 
 Hand tracking: [mediapipe-touchdesigner](https://github.com/torinmb/mediapipe-touchdesigner) by Torin Blankensmith, built on Google [MediaPipe](https://ai.google.dev/edge/mediapipe).
+
+## License
+
+[MIT](LICENSE)

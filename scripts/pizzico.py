@@ -1,25 +1,25 @@
-# Execute DAT "pizzico" — parametro Frame Start: On.
+# Execute DAT "pizzico" (pluck). Parameter Frame Start: On.
 #
-# A ogni frame guarda dove si è mossa la punta di ciascun indice
-# (h1/h2:index_finger_tip, da sel_dita). Se il tratto percorso dal dito
-# tra il frame precedente e questo attraversa una corda fissata, la corda
-# è pizzicata: scrive in corde_tab il momento (t0), il punto lungo la
-# corda (pos), un colore (col) e il verso (dir). Lo shader fa il resto.
+# Every frame, looks at where each index fingertip moved
+# (h1/h2:index_finger_tip, from sel_dita). If the path the finger travelled
+# between the previous frame and this one crosses a fixed string, the string
+# is plucked: writes to corde_tab the time (t0), the point along the
+# string (pos), a colour (col) and the direction (dir). The shader does the rest.
 
-ASPETTO = 1280 / 720   # x e y sono 0..1 su un'immagine 16:9
-MARGINE = 0.04         # vicino agli estremi non conta (lì c'è il pinch)
-PAUSA = 0.15           # secondi minimi tra due pizzichi della stessa corda
-SALTO_MAX = 0.35       # spostamenti più grandi sono salti del tracking
+ASPETTO = 1280 / 720   # x and y are 0..1 on a 16:9 image
+MARGINE = 0.04         # ignored near the endpoints (that's where the pinch is)
+PAUSA = 0.15           # minimum seconds between two plucks of the same string
+SALTO_MAX = 0.35       # larger moves are tracking jumps
 NUM_COLORI = 3
 
 DITI = ('h1:index_finger_tip', 'h2:index_finger_tip')
 
-# Suono: lunghezza della corda -> nota. Corta = acuta, lunga = grave.
-# Pentatonica minore di La su tre ottave, da La2 (110 Hz).
+# Sound: string length -> note. Short = high, long = low.
+# A minor pentatonic over three octaves, from A2 (110 Hz).
 PENTATONICA = (0, 3, 5, 7, 10)
 OTTAVE = 3
 NOTA_BASE = 110.0
-LUNGH_CORTA = 0.10     # in unità d'altezza dell'immagine (x già corretta)
+LUNGH_CORTA = 0.10     # in image-height units (x already corrected)
 LUNGH_LUNGA = 1.40
 
 
@@ -33,15 +33,15 @@ def _nota(lunghezza):
 
 
 def _suona(freq, pos):
-	"""Mette la nota nello storage di questo DAT; la legge lo Script CHOP
-	"suono". Ogni nota ha un id crescente, teniamo solo le ultime 32."""
+	"""Puts the note in this DAT's storage, where the "suono" Script CHOP
+	reads it. Each note has an increasing id; only the last 32 are kept."""
 	note = list(me.fetch('note', [], search=False))[-31:]
 	nuovo_id = note[-1][0] + 1 if note else 1
 	note.append((nuovo_id, freq, pos))
 	me.store('note', note)
 
-_prima = {}     # dito -> (x, y) al frame precedente
-_colore = [0]   # colore del prossimo pizzico, gira tra i NUM_COLORI
+_prima = {}     # finger -> (x, y) in the previous frame
+_colore = [0]   # colour of the next pluck, cycles through NUM_COLORI
 
 
 def _cross(ax, ay, bx, by):
@@ -53,43 +53,43 @@ def _dito(src, nome):
 	if cx is None or cy is None:
 		return None
 	x, y = cx.eval(), cy.eval()
-	if x == 0 and y == 0:   # mano non rilevata
+	if x == 0 and y == 0:   # hand not detected
 		return None
 	return (x * ASPETTO, y)
 
 
 def _attraversa(p0, p1, a, b):
-	"""Il tratto p0->p1 incrocia il segmento a->b?
-	Ritorna (posizione lungo a->b, verso) oppure None."""
+	"""Does the path p0->p1 cross the segment a->b?
+	Returns (position along a->b, direction) or None."""
 	rx, ry = b[0] - a[0], b[1] - a[1]
 	sx, sy = p1[0] - p0[0], p1[1] - p0[1]
 	den = _cross(rx, ry, sx, sy)
 	if abs(den) < 1e-9:
 		return None
 	qx, qy = p0[0] - a[0], p0[1] - a[1]
-	t = _cross(qx, qy, sx, sy) / den   # lungo la corda
-	u = _cross(qx, qy, rx, ry) / den   # lungo il movimento del dito
+	t = _cross(qx, qy, sx, sy) / den   # along the string
+	u = _cross(qx, qy, rx, ry) / den   # along the finger's movement
 	if MARGINE < t < 1 - MARGINE and 0.0 <= u <= 1.0:
 		return t, (1 if den > 0 else -1)
 	return None
 
 
-# Gesto "cancella tutto": due pugni chiusi tenuti per TEMPO_PUGNI secondi.
-SOGLIA_PUGNO = 0.6     # punteggio minimo di Closed_Fist (0..1)
+# "Clear all" gesture: two closed fists held for TEMPO_PUGNI seconds.
+SOGLIA_PUGNO = 0.6     # minimum Closed_Fist score (0..1)
 TEMPO_PUGNI = 0.6
 _pugni = {'da': None, 'armato': True}
 
 
 def pugni_recenti(secondi=1.0):
-	"""True se i due pugni erano chiusi negli ultimi `secondi`. Usata da
-	salva_corde: chiudendo i pugni il pinch scatta, e la corda "finta" si
-	rilascia quando riapri le mani, cioè subito dopo i pugni."""
+	"""True if both fists were closed in the last `secondi` seconds. Used by
+	salva_corde: closing your fists triggers a pinch, and that "fake" string
+	is released when you open your hands, right after the fists."""
 	ultimo = op('pizzico').fetch('pugni_ultimo', -1000.0, search=False)
 	return 0.0 <= absTime.seconds - ultimo < secondi
 
 
 def pugni_chiusi():
-	"""True se entrambe le mani fanno il pugno."""
+	"""True if both hands are making a fist."""
 	g = op('hand_tracking/gestures')
 	if g is None:
 		return False
@@ -103,14 +103,14 @@ def pugni_chiusi():
 def _controlla_pugni(ora):
 	if not pugni_chiusi():
 		_pugni['da'] = None
-		_pugni['armato'] = True   # riarmato quando apri le mani
+		_pugni['armato'] = True   # re-armed when you open your hands
 		return
 	op('pizzico').store('pugni_ultimo', ora)
 	if _pugni['da'] is None:
 		_pugni['da'] = ora
 	if _pugni['armato'] and ora - _pugni['da'] >= TEMPO_PUGNI:
 		op('salva_corde').module.svuota()
-		_pugni['armato'] = False   # una sola cancellazione per gesto
+		_pugni['armato'] = False   # only one clear per gesture
 
 
 def onFrameStart(frame):
@@ -133,8 +133,8 @@ def onFrameStart(frame):
 			continue
 
 		for r in range(1, tab.numRows):
-			# absTime riparte da zero a ogni apertura del progetto: un t0 "nel
-			# futuro" viene da una sessione precedente e non blocca il pizzico.
+			# absTime restarts from zero every time the project is opened: a t0
+			# "in the future" comes from a previous session and doesn't block the pluck.
 			if 0.0 <= ora - float(tab[r, 't0'].val) < PAUSA:
 				continue
 			a = (float(tab[r, 'ax'].val) * ASPETTO, float(tab[r, 'ay'].val))
