@@ -83,6 +83,56 @@ float vibrazione(float t, float eta, float pos, float verso) {
 	return y * AMPIEZZA_PIZZ * verso;
 }
 
+// Scintille.
+const int N_SCINTILLE = 14;
+const float DURATA_SCINT = 0.8;            // vita massima, s
+const vec2 GRAVITA = vec2(0.0, -900.0);    // px/s², y verso l'alto
+const float CODA = 0.025;                  // lunghezza della scia, s
+
+float hash(vec2 p) {
+	return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453);
+}
+
+float distSegmento(vec2 p, vec2 a, vec2 b) {
+	vec2 ab = b - a;
+	float t = clamp(dot(p - a, ab) / max(dot(ab, ab), 1e-6), 0.0, 1.0);
+	return length(p - a - ab * t);
+}
+
+// Luce delle scintille di un pizzico nel pixel p.
+// origine: punto pizzicato (px); nrm: normale della corda; verso: lato verso
+// cui è passato il dito; seme: diverso per ogni pizzico.
+float scintille(vec2 p, vec2 origine, vec2 nrm, float verso, float eta, float seme) {
+	if (eta < 0.0 || eta > DURATA_SCINT) return 0.0;
+	// scarto veloce: oltre ~600 px dall'origine non arriva nessuna scintilla
+	if (length(p - origine) > 600.0) return 0.0;
+
+	float luce = 0.0;
+	for (int k = 0; k < N_SCINTILLE; k++) {
+		float fk = float(k);
+		float h1 = hash(vec2(seme, fk));
+		float h2 = hash(vec2(fk, seme + 7.31));
+		float h3 = hash(vec2(seme + fk, 3.17));
+
+		float vita = mix(0.35, 1.0, h3) * DURATA_SCINT;
+		if (eta > vita) continue;
+
+		float ang = h1 * 2.0 * PI;
+		vec2 dir = normalize(vec2(cos(ang), sin(ang)) + nrm * verso * 0.9);
+		vec2 v0 = dir * mix(80.0, 320.0, h2);
+
+		vec2 testa = origine + v0 * eta + 0.5 * GRAVITA * eta * eta;
+		float e0 = max(eta - CODA, 0.0);
+		vec2 coda = origine + v0 * e0 + 0.5 * GRAVITA * e0 * e0;
+
+		float d = distSegmento(p, coda, testa);
+		float vivo = 1.0 - eta / vita;
+		float brillio = 0.65 + 0.35 * sin(eta * 70.0 + fk * 2.3);
+		luce += (smoothstep(1.0, 0.0, d) + exp(-d * 0.7) * 0.3) * vivo * brillio;
+	}
+	return luce;
+}
+
 // Corda fissata: linea + tacche perpendicolari + "T" agli estremi.
 // "onda" sposta linea e tacche perpendicolarmente (le teste restano ferme).
 // Ritorna (distanza dalla linea, distanza da tacche e teste).
@@ -128,6 +178,14 @@ void main() {
 		float glow = exp(-d.x * mix(0.5, 0.25, accesa)) * mix(0.25, 1.1, accesa);
 
 		col += tinta * (max(linea, segni) + glow);
+
+		// Scintille dal punto pizzicato, bianche con un filo del colore.
+		vec2 a = c.xy * res;
+		vec2 b = c.zw * res;
+		vec2 dirC = normalize(b - a + 1e-6);
+		vec2 nrm = vec2(-dirC.y, dirC.x);
+		float sc = scintille(p, mix(a, b, pz.y), nrm, pz.w, eta, pz.x + float(i) * 13.7);
+		col += mix(vec3(1.0, 0.97, 0.9), colorePizzico(pz.z), 0.3) * sc;
 	}
 
 	// Corda viva, sopra a tutto.
