@@ -1,0 +1,8 @@
+# TouchDesigner: backup automatici e incrementali
+Backup/
+*.[0-9]*.toe
+CrashAutoSave*
+.DS_Store
+# dipendenze scaricate (release di mediapipe-touchdesigner)
+vendor/
+__pycache__/
